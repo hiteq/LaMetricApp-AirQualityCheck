@@ -1,6 +1,6 @@
-const fetch = require('node-fetch');
 const fs = require('fs');
 const path = require('path');
+// Node.js 18+에서는 fetch가 내장되어 있음
 
 // 설정
 const API_KEY = process.env.AIR_KOREA_API_KEY;

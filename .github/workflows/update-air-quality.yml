@@ -21,9 +21,9 @@ jobs:
       with:
         node-version: '18'
         
-    - name: Install dependencies
+    - name: Install dependencies (Node.js 18+ has built-in fetch)
       run: |
-        npm install node-fetch
+        echo "Node.js 18+ has built-in fetch - no additional dependencies needed"
         
     - name: Update air quality data
       env:
