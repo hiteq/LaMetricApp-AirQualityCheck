@@ -104,3 +104,13 @@ function getOverallAirQualityStatus(pm10, pm25) {
 
 // If LaMetric requires exporting the function differently, this needs to be adjusted.
 // export { getOverallAirQualityStatus, AIR_QUALITY_LEVELS };
+
+// Add this to the end of air_quality_utils.js for Node.js testing
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        AIR_QUALITY_LEVELS,
+        getPm25Level,
+        getPm10Level,
+        getOverallAirQualityStatus
+    };
+}

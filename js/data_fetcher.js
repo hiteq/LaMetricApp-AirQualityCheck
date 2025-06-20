@@ -82,3 +82,8 @@ async function getAirQualityData(stationName = '종로구') { // Default if not 
 // For example, for a module:
 // export { getAirQualityData };
 // Or for a simple global function, the above definition might be enough.
+
+// Add this to the end of data_fetcher.js for Node.js testing
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { getAirQualityData };
+}
