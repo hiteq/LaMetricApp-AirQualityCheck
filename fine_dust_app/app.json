@@ -1,0 +1,31 @@
+{
+    "appid": "com.example.finedust",
+    "version": "1.0.0",
+    "name": "미세먼지 알리미",
+    "description": "현재 위치의 미세먼지 상태를 표시합니다.",
+    "author": "AI Assistant",
+    "icons": {
+        "i438": "images/icon_small.png",
+        "i439": "images/icon_large.png"
+    },
+    "frames": [
+        {
+            "id": "main_frame",
+            "text": "미세먼지: 로딩중...",
+            "icon": "i438",
+            "duration": 0
+        }
+    ],
+    "settings": [
+        {
+            "type": "string",
+            "id": "stationName",
+            "label": "측정소명 (예: 종로구)",
+            "default": "종로구"
+        },
+        {
+            "type": "label",
+            "text": "참고: Air Korea API 키가 필요할 수 있습니다 (현재 앱은 목업 데이터 사용)."
+        }
+    ]
+}
