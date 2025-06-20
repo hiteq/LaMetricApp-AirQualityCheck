@@ -1,0 +1,44 @@
+name: Update Air Quality Data
+
+on:
+  schedule:
+    # 매 15분마다 실행 (0,15,30,45분)
+    - cron: '*/15 * * * *'
+  workflow_dispatch: # 수동 실행 가능
+  push:
+    branches: [ main ]
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install dependencies
+      run: |
+        npm install node-fetch
+        
+    - name: Update air quality data
+      env:
+        AIR_KOREA_API_KEY: ${{ secrets.AIR_KOREA_API_KEY }}
+      run: |
+        node .github/scripts/update-air-quality.js
+        
+    - name: Commit and push if changed
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add -A
+        if ! git diff --cached --quiet; then
+          git commit -m "🌫️ Update air quality data - $(date '+%Y-%m-%d %H:%M:%S')"
+          git push
+        else
+          echo "No changes to commit"
+        fi 

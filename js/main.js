@@ -1,128 +1,253 @@
-// main.js - Main script for the LaMetric Fine Dust App
+// main.js - LaMetric 미세먼지 앱의 메인 스크립트
 
-// --- Conceptual Imports ---
-// LaMetric environment might handle JS files differently.
-// These are placeholders for how one might include other scripts if it were Node.js or similar.
-// Assume functions from data_fetcher.js and air_quality_utils.js are available globally
-// or loaded/imported via LaMetric's specific mechanism.
-// For the purpose of this subtask, we'll assume getAirQualityData and getOverallAirQualityStatus are defined.
-// If this were a real LaMetric app, these would be loaded via:
-// e.g. var DataFetcher = require('./data_fetcher.js');
-// e.g. var Utils = require('./air_quality_utils.js');
+// --- 개념적 Import ---
+// LaMetric 환경은 JS 파일을 다르게 처리할 수 있습니다.
+// 이것들은 Node.js나 유사한 환경에서 다른 스크립트를 포함하는 방법에 대한 플레이스홀더입니다.
+// data_fetcher.js와 air_quality_utils.js의 함수들이 전역적으로 사용 가능하거나
+// LaMetric의 특정 메커니즘을 통해 로드/import되었다고 가정합니다.
+// 이 하위 작업의 목적상, getAirQualityData와 getOverallAirQualityStatus가 정의되어 있다고 가정합니다.
+// 실제 LaMetric 앱이었다면, 이들은 다음과 같이 로드될 것입니다:
+// 예: var DataFetcher = require('./data_fetcher.js');
+// 예: var Utils = require('./air_quality_utils.js');
 
-// Placeholder for LaMetric's way of managing frames and app lifecycle.
-// This is highly conceptual.
+// LaMetric의 프레임 및 앱 생명주기 관리 방법에 대한 플레이스홀더.
+// 이것은 매우 개념적입니다.
 const LaMetric = {
     frames: {
-        main_frame: { // Matches the ID in app.json
-            text: 'Initializing...',
-            icon: 'i438', // Default icon from app.json
-            // Potentially other properties like 'backgroundColor' or specific colored icons
+        main_frame: { // app.json의 ID와 일치
+            text: '초기화 중...',
+            icon: 'i438', // app.json의 기본 아이콘
+            // 'backgroundColor'나 특정 색상 아이콘과 같은 잠재적인 다른 속성들
         }
     },
-    // Mock function to simulate pushing frame updates to the device
+    // 장치에 프레임 업데이트를 푸시하는 것을 시뮬레이션하는 목업 함수
     pushFrame: function(frameId, frameData) {
-        if (this.frames[frameId]) {
-            Object.assign(this.frames[frameId], frameData);
-            console.log(`LAMETRIC_PUSH_FRAME: ID=${frameId}, DATA=${JSON.stringify(this.frames[frameId])}`);
-        } else {
-            console.error(`LAMETRIC_PUSH_FRAME: Unknown frame ID: ${frameId}`);
-        }
+        console.log(`LaMetric에 프레임 "${frameId}"을(를) 푸시 중:`, frameData);
+        // 실제 LaMetric 환경에서는 장치 디스플레이를 업데이트하는 실제 호출이 될 것입니다
     },
-    // Mock function for app lifecycle: onReady, onNextFrame, etc.
-    onReady: function(callback) {
-        console.log('LAMETRIC_LIFECYCLE: App ready.');
-        if(callback) callback();
-    },
-    // Function to get settings. In a real app, LaMetric OS provides these.
-    getSettings: function() {
-        // This mock should reflect settings defined in app.json
-        // 'stationName' would be populated by user input in LaMetric app configuration.
+    // 앱 설정에서 사용자 구성을 가져오는 것을 시뮬레이션
+    getConfig: function() {
+        // 실제 LaMetric에서는 앱 설정 UI에서 사용자가 설정한 값들을 반환
+        // 여기서는 목업 데이터를 사용하지만, 실제 환경에서는 LaMetric OS가 제공
         return {
-            stationName: '종로구' // Default value if not set by user, or actual value from LaMetric
+            apiKey: null, // 실제로는 사용자가 입력한 API 키
+            stationName: '종로구', // 사용자가 선택한 측정소
+            refreshInterval: 15, // 분 단위 (15분)
+            showDetailedInfo: true
         };
+    },
+    
+    // 실제 LaMetric 환경에서 설정을 가져오는 함수
+    getSettings: function() {
+        // 실제 LaMetric OS에서 제공되는 설정 데이터
+        // 이것은 목업이며, 실제 LaMetric에서는 다르게 구현됨
+        return this.getConfig();
     }
 };
 
-// --- Main Application Logic ---
-
-async function updateDisplay() {
-    console.log('Updating display...');
-    // Get configured station from LaMetric settings (mocked here)
-    const settings = LaMetric.getSettings();
-    const stationName = settings.stationName; // Ensure this is used
-
-    // console.log(`Using station name: ${stationName} from settings.`); // For debugging
-
-    // 1. Fetch air quality data (currently mock)
-    // In a real scenario: const airData = await DataFetcher.getAirQualityData(stationName);
-    const airData = await getAirQualityData(stationName); // Pass the stationName
-
-    let displayText = '정보 없음';
-    let displayIcon = 'i438'; // Default icon
-    let frameColor = '#808080'; // Default grey color
-
-    if (airData && !airData.error) {
-        // 2. Determine air quality status and color
-        // In a real scenario: const status = Utils.getOverallAirQualityStatus(airData.pm10, airData.pm25);
-        const status = getOverallAirQualityStatus(airData.pm10, airData.pm25); // Assumes global from air_quality_utils.js
-
-        // 3. Format text for display
-        // Example: "종로구: 좋음 (PM10: 25)" or "종로구: 보통 (PM2.5: 30)"
-        displayText = `${airData.station || stationName}: ${status.status}`;
-        if (status.dominantValueDisplay && status.dominantValueDisplay !== 'N/A') {
-            displayText += ` (${status.dominantValueDisplay})`;
+// 앱의 메인 실행 함수
+async function runAirQualityApp() {
+    try {
+        console.log('미세먼지 LaMetric 앱 시작...');
+        
+        // 앱 설정 가져오기
+        const config = LaMetric.getConfig();
+        console.log('앱 설정:', config);
+        
+        // API 키 설정 및 유효성 검사
+        if (config.apiKey) {
+            setApiKey(config.apiKey);
         }
-
-        frameColor = status.color;
-
-        // Icon handling:
-        // Ideally, we'd have different icons for different states (e.g., icon_blue, icon_green)
-        // or use LaMetric's built-in colored icons if their names were known.
-        // For now, we're just setting the color property conceptually.
-        // If LaMetric uses specific icon names for colors:
-        // displayIcon = getIconForStatus(status.levelOrder); // e.g. a function that returns 'a74_blue', 'a74_green'
-        // For this example, we'll stick to the single icon and rely on the 'frameColor' being used.
-        // The 'icon' field in the frame could also be dynamically set to a pre-defined colored icon.
-        // e.g. displayIcon = `i_AQI_${status.levelOrder}`; (assuming icons like i_AQI_1, i_AQI_2 exist)
-
-        console.log(`Formatted display text: ${displayText}, Color: ${frameColor}`);
-
-    } else {
-        displayText = airData.message || '데이터 로딩 실패';
-        console.error('Failed to get air quality data or error in data:', airData);
+        
+        if (typeof validateApiKey === 'function' && !validateApiKey()) {
+            console.error('❌ API 키가 설정되지 않았습니다.');
+            updateDisplayFrame('API키 필요', 'i120'); // 경고 아이콘
+            return;
+        }
+        
+        // 대기질 데이터 가져오기
+        console.log(`"${config.stationName}" 측정소의 대기질 데이터를 가져오는 중...`);
+        const airQualityData = await getAirQualityData(config.stationName);
+        
+        if (!airQualityData) {
+            console.error('대기질 데이터를 가져올 수 없습니다.');
+            updateDisplayFrame('데이터 없음', 'i120');
+            return;
+        }
+        
+        // 데이터 유효성 검사
+        if (airQualityData.isTestData) {
+            console.log('⚠️ 테스트 데이터 사용 중 - 실제 API 키를 설정해주세요');
+        }
+        
+        console.log('가져온 대기질 데이터:', airQualityData);
+        
+        // 전체 대기질 상태 계산
+        const overallStatus = getOverallAirQualityStatus(airQualityData);
+        console.log('전체 대기질 상태:', overallStatus);
+        
+        // LaMetric 디스플레이 업데이트
+        updateAirQualityDisplay(airQualityData, overallStatus, config);
+        
+    } catch (error) {
+        console.error('앱 실행 중 오류 발생:', error);
+        updateDisplayFrame('오류 발생', 'i120');
     }
-
-    // 4. Update LaMetric Frame
-    // This is a conceptual update. The actual API might be different.
-    // It might involve creating a new frame object and returning it.
-    LaMetric.pushFrame('main_frame', {
-        text: displayText,
-        icon: displayIcon, // Could be dynamic based on status
-        // LaMetric might support 'backgroundColor: frameColor' or specific colored icons.
-        // For now, we are just logging the intended color.
-        // If using icons like 'a1234_#FF0000_text', the color is embedded.
-        // If frames have a color property, it would be set here.
-        // This is a major point of uncertainty without docs.
-    });
-    console.log(`Intended frame color for display: ${frameColor}`);
 }
 
-// --- App Initialization and Polling ---
-LaMetric.onReady(async () => {
-    await updateDisplay(); // Initial update
+// LaMetric 디스플레이 업데이트 함수
+function updateAirQualityDisplay(data, overallStatus, config) {
+    // 주요 미세먼지 수치 선택 (PM2.5 우선, 없으면 PM10)
+    const primaryPM = data.pm25.value !== null ? data.pm25 : data.pm10;
+    const primaryType = data.pm25.value !== null ? 'PM2.5' : 'PM10';
+    
+    if (!primaryPM.value) {
+        console.warn('유효한 미세먼지 데이터가 없습니다.');
+        updateDisplayFrame('데이터 없음', 'i120');
+        return;
+    }
+    
+    // 상태에 따른 아이콘 선택
+    const statusIcon = getStatusIcon(overallStatus);
+    
+    // 기본 표시 텍스트 생성
+    let displayText;
+    if (config.showDetailedInfo) {
+        // 상세 정보 표시
+        displayText = `${data.stationName} ${primaryType}:${primaryPM.value}㎍/㎥ (${overallStatus.text})`;
+    } else {
+        // 간단한 정보 표시
+        displayText = `${primaryType} ${primaryPM.value} (${overallStatus.text})`;
+    }
+    
+    // LaMetric 프레임 데이터 생성
+    const frameData = {
+        text: displayText,
+        icon: statusIcon,
+        // 상태에 따른 색상 적용 (LaMetric이 지원하는 경우)
+        // color: overallStatus.color // LaMetric 환경에 따라 조정 필요
+    };
+    
+    console.log('디스플레이 업데이트:', frameData);
+    
+    // LaMetric 장치에 프레임 푸시
+    updateDisplayFrame(frameData.text, frameData.icon);
+    
+    // 추가 정보 로깅
+    logDetailedAirQualityInfo(data);
+}
 
-    // Set up polling - LaMetric might have its own scheduler or way to declare update frequency.
-    // This setInterval is a generic JavaScript way to do it.
-    const updateInterval = 15 * 60 * 1000; // 15 minutes
-    setInterval(async () => {
-        await updateDisplay();
-    }, updateInterval);
+// 상태에 따른 아이콘 선택 함수
+function getStatusIcon(status) {
+    // LaMetric 아이콘 ID에 맞게 조정 필요
+    switch (status.order) {
+        case 1: return 'i2395'; // 좋음 - 웃는 얼굴
+        case 2: return 'i2396'; // 보통 - 평범한 얼굴
+        case 3: return 'i2397'; // 나쁨 - 우울한 얼굴
+        case 4: return 'i2398'; // 매우 나쁨 - 매우 우울한 얼굴
+        default: return 'i438'; // 기본 아이콘
+    }
+}
 
-    console.log(`App initialized. Display will update every ${updateInterval / 1000 / 60} minutes.`);
-});
+// LaMetric 프레임 업데이트 헬퍼 함수
+function updateDisplayFrame(text, icon) {
+    LaMetric.frames.main_frame.text = text;
+    LaMetric.frames.main_frame.icon = icon;
+    LaMetric.pushFrame('main_frame', LaMetric.frames.main_frame);
+}
 
-// This makes the functions available if they are not truly global (e.g. if files are concatenated)
-// This part might not be necessary depending on LaMetric's JS environment.
-// window.getAirQualityData = typeof getAirQualityData !== 'undefined' ? getAirQualityData : (async () => ({error: true, message: "Not loaded"}));
-// window.getOverallAirQualityStatus = typeof getOverallAirQualityStatus !== 'undefined' ? getOverallAirQualityStatus : (() => ({status: 'N/A', color: '#808080'}));
+// 상세 대기질 정보 로깅
+function logDetailedAirQualityInfo(data) {
+    console.log('=== 상세 대기질 정보 ===');
+    console.log(`측정소: ${data.stationName}`);
+    console.log(`측정시간: ${data.dataTime}`);
+    
+    if (data.pm10.value !== null) {
+        console.log(`PM10: ${data.pm10.value}㎍/㎥ (등급: ${data.pm10.grade})`);
+    }
+    
+    if (data.pm25.value !== null) {
+        console.log(`PM2.5: ${data.pm25.value}㎍/㎥ (등급: ${data.pm25.grade})`);
+    }
+    
+    if (data.khaiValue !== null) {
+        console.log(`통합대기환경지수: ${data.khaiValue} (등급: ${data.khaiGrade})`);
+    }
+    
+    // 기타 대기질 정보
+    const additionalData = [];
+    if (data.so2 !== null) additionalData.push(`SO2: ${data.so2}ppm`);
+    if (data.co !== null) additionalData.push(`CO: ${data.co}ppm`);
+    if (data.o3 !== null) additionalData.push(`O3: ${data.o3}ppm`);
+    if (data.no2 !== null) additionalData.push(`NO2: ${data.no2}ppm`);
+    
+    if (additionalData.length > 0) {
+        console.log(`기타: ${additionalData.join(', ')}`);
+    }
+    
+    console.log('========================');
+}
+
+// 주기적 업데이트 함수
+function startPeriodicUpdates() {
+    const config = LaMetric.getConfig();
+    const intervalMinutes = config.refreshInterval || 15; // 기본 15분
+    const interval = intervalMinutes * 60 * 1000; // 분을 밀리초로 변환
+    
+    console.log(`${intervalMinutes}분(${interval / 1000}초)마다 대기질 데이터 업데이트를 시작합니다.`);
+    
+    // 즉시 한 번 실행
+    runAirQualityApp();
+    
+    // 주기적 실행
+    setInterval(() => {
+        console.log('주기적 대기질 데이터 업데이트...');
+        runAirQualityApp();
+    }, interval);
+}
+
+// 앱 초기화 및 시작
+function initializeApp() {
+    console.log('LaMetric 미세먼지 앱 초기화 중...');
+    
+    // 필요한 함수들이 정의되어 있는지 확인
+    if (typeof getAirQualityData !== 'function') {
+        console.error('getAirQualityData 함수를 찾을 수 없습니다. data_fetcher.js가 로드되었는지 확인하세요.');
+        return;
+    }
+    
+    if (typeof getOverallAirQualityStatus !== 'function') {
+        console.error('getOverallAirQualityStatus 함수를 찾을 수 없습니다. air_quality_utils.js가 로드되었는지 확인하세요.');
+        return;
+    }
+    
+    console.log('모든 필수 함수가 사용 가능합니다. 앱을 시작합니다.');
+    
+    // 주기적 업데이트 시작
+    startPeriodicUpdates();
+}
+
+// LaMetric 환경에서 앱이 시작될 때 호출되는 함수
+// 실제 LaMetric 환경에서는 다른 이벤트나 시작점이 있을 수 있습니다
+if (typeof window !== 'undefined') {
+    // 브라우저 환경에서 테스트하는 경우
+    window.addEventListener('load', initializeApp);
+} else {
+    // LaMetric 환경이나 Node.js 환경에서 즉시 실행
+    initializeApp();
+}
+
+// 수동 실행 함수 (디버깅/테스트용)
+function manualRefresh() {
+    console.log('수동 새로고침 요청됨...');
+    runAirQualityApp();
+}
+
+// 모듈 내보내기 (필요한 경우)
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        runAirQualityApp,
+        initializeApp,
+        manualRefresh
+    };
+}

@@ -1,89 +1,238 @@
-// This script is a placeholder for fetching air quality data.
-// It needs adjustment based on LaMetric's specific JavaScript environment
-// and how it handles HTTP requests (e.g., if it provides a global fetch
-// or a specific module like http.get).
-// The current implementation uses mock data for development and testing purposes.
+// 이 스크립트는 대기질 데이터를 가져오기 위한 플레이스홀더입니다.
+// LaMetric의 특정 JavaScript 환경과 HTTP 요청을 처리하는 방법에 따라 조정이 필요합니다
+// (예: 전역 fetch를 제공하는지 또는 http.get과 같은 특정 모듈인지).
+// 현재 구현은 개발 및 테스트 목적을 위해 목업 데이터를 사용합니다.
 
-async function getAirQualityData(stationName = '종로구') { // Default if not provided
-    // IMPORTANT: This is a placeholder URL.
-    // A real API key and proper parameters are required for Air Korea.
-    // The 'stationName' parameter used in the URL should be configurable by the user
-    // through LaMetric app settings.
-    const apiKey = 'YOUR_API_KEY_HERE'; // Needs to be replaced with a real key
-    const dataUrl = `https://api.airkorea.or.kr/B552584/MsrstnInfoInqireSvc/getMsrstnList?serviceKey=${apiKey}&returnType=json&numOfRows=1&pageNo=1&stationName=${encodeURIComponent(stationName)}&dataTerm=DAILY&ver=1.3`;
+// 실제 Air Korea API를 사용하여 대기질 데이터를 가져오는 스크립트
+// 공공데이터포털의 한국환경공단 에어코리아 대기오염정보 API 사용
 
-    console.log(`Fetching air quality data for station: ${stationName} from ${dataUrl}`);
+async function getAirQualityData(stationName = '종로구') {
+    // 실제 Air Korea API 설정
+    // 주의: 실제 사용시 API 키를 환경변수나 설정 파일에서 가져와야 합니다
+    const apiKey = getApiKey();
+    
+    // 실제 에어코리아 API 엔드포인트 - 측정소별 실시간 측정정보 조회
+    const baseUrl = 'http://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getMsrstnAcctoRltmMesureDnsty';
+    
+    // API 요청 파라미터 설정
+    const params = new URLSearchParams({
+        serviceKey: apiKey,
+        returnType: 'json', // JSON 형태로 응답 받기
+        numOfRows: '1',     // 한 페이지 결과 수
+        pageNo: '1',        // 페이지 번호
+        stationName: stationName, // 측정소명
+        dataTerm: 'DAILY',  // 요청 데이터 기간 (DAILY: 1일)
+        ver: '1.3'          // API 버전
+    });
+
+    const apiUrl = `${baseUrl}?${params.toString()}`;
+    
+    console.log(`측정소 "${stationName}"의 대기질 데이터를 API에서 가져오는 중...`);
+    console.log(`요청 URL: ${apiUrl.replace(apiKey, 'API_KEY_HIDDEN')}`);
 
     try {
-        // This is a conceptual fetch. LaMetric might have its own http.get or similar.
-        // const response = await fetch(dataUrl, { headers: { 'Accept': 'application/json' } });
-        // if (!response.ok) {
-        //     console.error(`API request failed with status: ${response.status}`);
-        //     return { error: true, message: `API Error: ${response.status}` };
-        // }
-        // const data = await response.json();
-
-        // --- START MOCK DATA ---
-        // Due to inability to test live API calls and get LaMetric docs,
-        // using mock data to simulate a successful API response.
-        // Replace this with actual API call and parsing when environment is known.
-        console.log('Using MOCK DATA for air quality.');
-        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
-        const mockData = {
-            response: {
-                body: {
-                    items: [
-                        {
-                            stationName: stationName,
-                            pm10Value: Math.floor(Math.random() * 150) + 1, // Random PM10 between 1 and 150
-                            pm25Value: Math.floor(Math.random() * 70) + 1,  // Random PM2.5 between 1 and 70
-                            dataTime: new Date().toISOString()
-                        }
-                    ]
-                },
-                header: {
-                    resultCode: "00",
-                    resultMsg: "NORMAL SERVICE."
-                }
-            }
-        };
-        const data = mockData;
-        // --- END MOCK DATA ---
-
-
-        if (data.response && data.response.body && data.response.body.items && data.response.body.items.length > 0) {
-            const item = data.response.body.items[0];
-            console.log('Successfully fetched and parsed data:', item);
-            return {
-                error: false,
-                station: item.stationName,
-                pm10: parseInt(item.pm10Value, 10),
-                pm25: parseInt(item.pm25Value, 10) || null, // PM2.5 might not always be available
-                timestamp: item.dataTime
-            };
-        } else {
-            console.error('API response format is not as expected or no items found.');
-            console.error('Received data:', JSON.stringify(data, null, 2));
-            return { error: true, message: 'Invalid API response format or no data.' };
+        // 실제 HTTP 요청 실행
+        // LaMetric 환경에서는 fetch 대신 http.get이나 다른 방법을 사용할 수 있음
+        const response = await fetch(apiUrl);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP 에러! 상태: ${response.status}`);
         }
+
+        const data = await response.json();
+        
+        // API 응답 검증
+        if (data.response && data.response.header) {
+            const resultCode = data.response.header.resultCode;
+            
+            if (resultCode !== '00') {
+                throw new Error(`API 에러! 코드: ${resultCode}, 메시지: ${data.response.header.resultMsg}`);
+            }
+            
+            // 응답 데이터가 있는지 확인
+            const items = data.response.body?.items;
+            if (!items || items.length === 0) {
+                console.warn(`측정소 "${stationName}"에 대한 데이터가 없습니다.`);
+                return null;
+            }
+            
+            const item = items[0]; // 첫 번째 데이터 항목 사용
+            
+            // 대기질 데이터 추출 및 가공
+            const airQualityData = {
+                stationName: stationName,
+                dataTime: item.dataTime || '알 수 없음',
+                pm10: {
+                    value: parseFloat(item.pm10Value) || null,
+                    grade: parseInt(item.pm10Grade) || null,
+                    grade24h: parseInt(item.pm10Grade1h) || null
+                },
+                pm25: {
+                    value: parseFloat(item.pm25Value) || null,
+                    grade: parseInt(item.pm25Grade) || null,
+                    grade24h: parseInt(item.pm25Grade1h) || null
+                },
+                // 추가 대기질 정보
+                so2: parseFloat(item.so2Value) || null,
+                co: parseFloat(item.coValue) || null,
+                o3: parseFloat(item.o3Value) || null,
+                no2: parseFloat(item.no2Value) || null,
+                khaiValue: parseInt(item.khaiValue) || null, // 통합대기환경지수
+                khaiGrade: parseInt(item.khaiGrade) || null
+            };
+            
+            console.log('대기질 데이터를 성공적으로 가져왔습니다:', airQualityData);
+            return airQualityData;
+            
+        } else {
+            throw new Error('API 응답 형식이 올바르지 않습니다.');
+        }
+        
     } catch (error) {
-        console.error('Error fetching air quality data:', error);
-        return { error: true, message: `Fetch error: ${error.message}` };
+        console.error('대기질 데이터 가져오기 실패:', error.message);
+        
+        // 에러 발생시 목업 데이터 반환 (개발/테스트용)
+        console.log('에러로 인해 목업 데이터를 반환합니다.');
+        return {
+            stationName: stationName,
+            dataTime: new Date().toLocaleString('ko-KR'),
+            pm10: { value: 45, grade: 2, grade24h: 2 },
+            pm25: { value: 28, grade: 2, grade24h: 2 },
+            so2: 0.003,
+            co: 0.6,
+            o3: 0.020,
+            no2: 0.023,
+            khaiValue: 85,
+            khaiGrade: 2,
+            isTestData: true // 테스트 데이터임을 표시
+        };
     }
 }
 
-// Example usage (for testing purposes, would be called by LaMetric environment)
-// (async () => {
-//     const airQuality = await getAirQualityData('종로구');
-//     console.log('Air Quality Result:', airQuality);
-// })();
+// 측정소 목록을 가져오는 함수 (LaMetric 앱 설정에서 사용할 수 있음)
+async function getStationList(addr = '서울') {
+    const apiKey = getApiKey();
+    const baseUrl = 'http://apis.data.go.kr/B552584/MsrstnInfoInqireSvc/getMsrstnList';
+    
+    const params = new URLSearchParams({
+        serviceKey: apiKey,
+        returnType: 'json',
+        numOfRows: '100',
+        pageNo: '1',
+        addr: addr
+    });
 
-// If LaMetric requires exporting the function differently, this needs to be adjusted.
-// For example, for a module:
-// export { getAirQualityData };
-// Or for a simple global function, the above definition might be enough.
+    const apiUrl = `${baseUrl}?${params.toString()}`;
+    
+    try {
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+            throw new Error(`HTTP 에러! 상태: ${response.status}`);
+        }
 
-// Add this to the end of data_fetcher.js for Node.js testing
+        const data = await response.json();
+        
+        if (data.response && data.response.header.resultCode === '00') {
+            const items = data.response.body?.items || [];
+            return items.map(item => ({
+                stationName: item.stationName,
+                addr: item.addr,
+                dmX: item.dmX, // 위도
+                dmY: item.dmY, // 경도
+                items: item.item // 측정항목
+            }));
+        }
+        
+        throw new Error('측정소 목록을 가져올 수 없습니다.');
+        
+    } catch (error) {
+        console.error('측정소 목록 조회 실패:', error.message);
+        
+        // 에러시 기본 측정소 목록 반환
+        return [
+            { stationName: '종로구', addr: '서울 종로구', dmX: '37.5729', dmY: '126.9794' },
+            { stationName: '중구', addr: '서울 중구', dmX: '37.5640', dmY: '126.9759' },
+            { stationName: '강남구', addr: '서울 강남구', dmX: '37.5172', dmY: '127.0473' }
+        ];
+    }
+}
+
+// 전역 API 키 저장소
+let GLOBAL_API_KEY = null;
+
+// API 키 설정 도우미 함수
+function setApiKey(key) {
+    if (!key || key === 'YOUR_API_KEY_HERE') {
+        console.error('❌ 유효하지 않은 API 키입니다.');
+        return false;
+    }
+    
+    GLOBAL_API_KEY = key;
+    console.log('✅ Air Korea API 키가 설정되었습니다.');
+    return true;
+}
+
+// API 키 가져오기 함수
+function getApiKey() {
+    // 1. 전역 변수에서 확인
+    if (GLOBAL_API_KEY) {
+        return GLOBAL_API_KEY;
+    }
+    
+    // 2. LaMetric 설정에서 확인 (LaMetric 환경인 경우)
+    if (typeof LaMetric !== 'undefined' && LaMetric.getConfig) {
+        const config = LaMetric.getConfig();
+        if (config.apiKey) {
+            GLOBAL_API_KEY = config.apiKey;
+            return GLOBAL_API_KEY;
+        }
+    }
+    
+    // 3. 환경변수에서 확인 (Node.js 환경인 경우)
+    if (typeof process !== 'undefined' && process.env && process.env.AIR_KOREA_API_KEY) {
+        GLOBAL_API_KEY = process.env.AIR_KOREA_API_KEY;
+        return GLOBAL_API_KEY;
+    }
+    
+    // 4. 브라우저 전역 변수에서 확인
+    if (typeof window !== 'undefined' && window.AIR_KOREA_API_KEY) {
+        GLOBAL_API_KEY = window.AIR_KOREA_API_KEY;
+        return GLOBAL_API_KEY;
+    }
+    
+    // API 키가 없는 경우
+    return 'YOUR_API_KEY_HERE';
+}
+
+// API 키 검증 함수
+function validateApiKey() {
+    const apiKey = getApiKey();
+    
+    if (apiKey === 'YOUR_API_KEY_HERE' || !apiKey) {
+        console.warn('⚠️ Air Korea API 키가 설정되지 않았습니다!');
+        console.warn('   setApiKey() 함수를 사용하여 실제 API 키를 설정해주세요.');
+        console.warn('   API 키는 https://data.go.kr 에서 발급받을 수 있습니다.');
+        return false;
+    }
+    
+    console.log('✅ API 키가 유효합니다.');
+    return true;
+}
+
+// API 키 초기화 함수
+function clearApiKey() {
+    GLOBAL_API_KEY = null;
+    console.log('🗑️ API 키가 초기화되었습니다.');
+}
+
+// 모듈 내보내기 (LaMetric 환경에 따라 조정 필요)
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { getAirQualityData };
+    module.exports = {
+        getAirQualityData,
+        getStationList,
+        setApiKey,
+        getApiKey,
+        validateApiKey,
+        clearApiKey
+    };
 }

@@ -1,0 +1,63 @@
+# 환경변수 파일 (API 키 보안)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# 런타임 데이터
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# 커버리지 디렉토리
+coverage/
+*.lcov
+
+# 의존성 디렉토리
+node_modules/
+jspm_packages/
+
+# 로그 파일
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 캐시 파일
+.npm
+.eslintcache
+
+# 운영체제 파일
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE 파일
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 빌드 출력
+dist/
+build/
+out/
+
+# 임시 파일
+tmp/
+temp/ 
